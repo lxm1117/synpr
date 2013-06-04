@@ -1,8 +1,0 @@
-create soma
-create dend[5]
-
-connect dend[0](0), soma(1)
-for i=0, 3{
-	connect dend[i+1](0), dend[i](1)
-}
-
