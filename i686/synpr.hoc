@@ -1,0 +1,37 @@
+load_file("nrngui.hoc")
+dend_num=5
+create soma
+create dend[dend_num]
+
+connect dend[0](0), soma(1)
+for i=0, dend_num-2{
+	connect dend[i+1](0), dend[i](1)
+}
+
+soma.diam=10
+soma.L=10
+dend[0].diam(0:1)=10:1
+dend.L=10
+for i=1, dend_num-1 {
+	dend[i].diam=1
+	dend[i].L=10
+}
+
+//for one synapse at one time
+objref syn[dend_num]
+for i=0,dend_num-1 {
+	dend[i] syn[i]=new expsyn2b(0.5)
+	syn[i].del=10+i
+	syn[i].interval=20
+	syn[i].num=10
+}
+
+tstop=500
+load_file("synpr.ses")
+forall {
+ 	insert hh
+	insert pas
+}
+
+
+

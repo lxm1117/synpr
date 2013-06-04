@@ -6,4 +6,3 @@ for i=0, 3{
 	connect dend[i+1](0), dend[i](1)
 }
 
-

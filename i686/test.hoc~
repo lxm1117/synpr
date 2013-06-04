@@ -1,0 +1,16 @@
+load_file("nrngui.hoc")
+
+create soma
+objref syn, ntc
+soma syn=new expsyn2b(0.5)
+soma insert hh
+//ntc=new NetCon(&soma.v(1), syn, 0, 3, 1)
+//ntc.delay=3
+//ntc.weight=1
+syn.num=10
+syn.del=0
+syn.interval=10
+syn.pr1=0.5
+tstop=500
+load_file("test.ses")
+
