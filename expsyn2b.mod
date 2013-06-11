@@ -101,7 +101,6 @@ BREAKPOINT {
 	:++++printf("%s, %f, %s, %f, %s, %f\n", "gampa: ", gampa, "gnmda: ", gnmda, "i: ", i )
 }
 
-
 NET_RECEIVE( weight (uS)) { :not sure how to write the arguments here, weight or t0 
 	if(flag==1){
 		pr1=rlpr[index]

@@ -6,8 +6,8 @@ modl_reg(){
   if (!nrn_nobanner_) if (nrnmpi_myid < 1) {
     fprintf(stderr, "Additional mechanisms from files\n");
 
-    fprintf(stderr," expsyn2b.mod");
+    fprintf(stderr," expsyn2c.mod");
     fprintf(stderr, "\n");
   }
-  _expsyn2b_reg();
+  _expsyn2c_reg();
 }

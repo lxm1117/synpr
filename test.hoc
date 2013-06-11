@@ -1,0 +1,11 @@
+create soma
+objref syn
+soma syn=new expsyn2c(0.5)
+soma insert hh
+insert pas
+syn.num=10
+syn.del=50
+syn.interval=10
+
+load_file("test.ses")
+
