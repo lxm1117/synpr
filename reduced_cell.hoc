@@ -1,0 +1,35 @@
+load_file("nrngui.hoc")
+load_file("n400td-pc2-mM-axn.hoc")
+count=0
+
+objref slist, sp
+slist=new SectionList()
+sp=new PlotShape()
+
+forsec "dend_apical" {
+	count+=1
+	slist.append()
+	print secname(), "  ", count
+}
+sp.color_list(slist,2)
+
+
+objref syn[count]
+k=0
+forsec "dend_apical" {
+	syn[k]=new expsyn2c(0.5)
+	syn[k].num=81
+	syn[k].interval=10	
+	syn[k].del=10
+	k+=1
+}	
+
+
+forall {Rm=12000
+	Cm=1
+	Ra=100
+	insert hh
+	insert pas
+}
+
+load_file("reduced_cell.ses")

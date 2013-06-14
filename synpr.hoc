@@ -31,6 +31,7 @@ load_file("synpr.ses")
 forall {
  	insert hh
 	insert pas
+
 }
 
 

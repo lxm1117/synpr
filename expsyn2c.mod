@@ -12,7 +12,7 @@ NEURON {
 	RANGE nmdar_Mg
 	RANGE num, del, interval
 	NONSPECIFIC_CURRENT i
-	GLOBAL k_ampar, alpha_ampar, beta_ampar, k_nmdar, alpha_nmdar,beta_nmdar, stimon
+	GLOBAL k_ampar, alpha_ampar, beta_ampar, k_nmdar, alpha_nmdar,beta_nmdar :, stimon
 }
 
 UNITS {
@@ -50,18 +50,19 @@ ASSIGNED {
 	nmdar_unbound   (1)
 
 	stim_index
-	rlpr[15]
+	rlpr[85]
 	pr1
 	pr2
 	num
 	del  (ms)
 	interval (ms)
-	stimon
+	:stimon
 }	
 
 INITIAL { 
 	stim_index=0
-	stimon=0	
+	:stimon=0
+	
 	ampar_active=0
 	ampar_bound=0
 	nmdar_active=0
@@ -100,9 +101,9 @@ BREAKPOINT {
 }
 
 DERIVATIVE state {
-	ampar_bound'=-k_ampar*ampar_bound - beta_ampar*ampar_bound + alpha_ampar*ampar_active:+syn_weight*0.6*ampar_unbound
+	ampar_bound'=-k_ampar*ampar_bound - beta_ampar*ampar_bound + alpha_ampar*ampar_active:+syn_weight*0.4*ampar_unbound
 	ampar_active'=beta_ampar*ampar_bound - alpha_ampar*ampar_active
-	nmdar_bound'=-k_nmdar*nmdar_bound - beta_nmdar*nmdar_bound + alpha_nmdar*nmdar_active:+syn_weight*0.6*nmdar_unbound
+	nmdar_bound'=-k_nmdar*nmdar_bound - beta_nmdar*nmdar_bound + alpha_nmdar*nmdar_active:+syn_weight*0.4*nmdar_unbound
 	nmdar_active'=beta_nmdar*nmdar_bound - alpha_nmdar*nmdar_active	
 }
 
@@ -112,6 +113,8 @@ NET_RECEIVE( weight (uS)) {
 		pr2=scop_random()
 				
 		if(pr2<pr1){
+
+			COMMENT
 			if(stimon==0) {
 				ampar_bound=ampar_tot
 				nmdar_bound=nmdar_tot
@@ -119,6 +122,8 @@ NET_RECEIVE( weight (uS)) {
 				nmdar_unbound=nmdar_tot-nmdar_active-nmdar_bound
 				stimon=1
 			}
+			ENDCOMMENT
+
 			ampar_bound=ampar_bound+0.6*ampar_unbound
 			nmdar_bound=nmdar_bound+0.6*nmdar_unbound
 			printf("%s %f %s %f %s %f %s %f %s %f\n", "pr1: ", pr1, "pr2: ", pr2, "stim_index: ", stim_index, "ampar_unbound: ", ampar_unbound, "nmdar_unbound: ", nmdar_unbound)

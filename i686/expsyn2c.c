@@ -52,14 +52,14 @@ extern double hoc_Exp();
 #define block _p[20]
 #define stim_index _p[21]
 #define rlpr (_p + 22)
-#define pr1 _p[37]
-#define pr2 _p[38]
-#define Dampar_bound _p[39]
-#define Dampar_active _p[40]
-#define Dnmdar_bound _p[41]
-#define Dnmdar_active _p[42]
-#define _g _p[43]
-#define _tsav _p[44]
+#define pr1 _p[107]
+#define pr2 _p[108]
+#define Dampar_bound _p[109]
+#define Dampar_active _p[110]
+#define Dnmdar_bound _p[111]
+#define Dnmdar_active _p[112]
+#define _g _p[113]
+#define _tsav _p[114]
 #define _nd_area  *_ppvar[0]._pval
  
 #if MAC
@@ -126,8 +126,6 @@ extern int nrn_get_mechtype();
  double k_ampar = 2;
 #define mg mg_expsyn2c
  double mg = 1.2;
-#define stimon stimon_expsyn2c
- double stimon = 0;
  /* some parameters have upper and lower limits */
  static HocParmLimits _hoc_parm_limits[] = {
  0,0,0
@@ -169,7 +167,6 @@ extern int nrn_get_mechtype();
  "k_nmdar_expsyn2c", &k_nmdar_expsyn2c,
  "alpha_nmdar_expsyn2c", &alpha_nmdar_expsyn2c,
  "beta_nmdar_expsyn2c", &beta_nmdar_expsyn2c,
- "stimon_expsyn2c", &stimon_expsyn2c,
  0,0
 };
  static DoubVec hoc_vdoub[] = {
@@ -224,7 +221,7 @@ static void nrn_alloc(_prop)
 	_p = nrn_point_prop_->param;
 	_ppvar = nrn_point_prop_->dparam;
  }else{
- 	_p = nrn_prop_data_alloc(_mechtype, 45, _prop);
+ 	_p = nrn_prop_data_alloc(_mechtype, 115, _prop);
  	/*initialize range parameters*/
  	scca = 8e-06;
  	sccn = 5e-05;
@@ -233,7 +230,7 @@ static void nrn_alloc(_prop)
  	nmdar_tot = 20;
   }
  	_prop->param = _p;
- 	_prop->param_size = 45;
+ 	_prop->param_size = 115;
   if (!nrn_point_prop_) {
  	_ppvar = nrn_prop_datum_alloc(_mechtype, 4, _prop);
   }
@@ -322,13 +319,6 @@ static _net_receive (_pnt, _args, _lflag) Point_process* _pnt; double* _args; do
      pr1 = rlpr [ ((int) stim_index ) ] ;
      pr2 = scop_random ( ) ;
      if ( pr2 < pr1 ) {
-       if ( stimon  == 0.0 ) {
-         ampar_bound = ampar_tot ;
-         nmdar_bound = nmdar_tot ;
-         ampar_unbound = ampar_tot - ampar_active - ampar_bound ;
-         nmdar_unbound = nmdar_tot - nmdar_active - nmdar_bound ;
-         stimon = 1.0 ;
-         }
        ampar_bound = ampar_bound + 0.6 * ampar_unbound ;
        nmdar_bound = nmdar_bound + 0.6 * nmdar_unbound ;
        printf ( "%s %f %s %f %s %f %s %f %s %f\n" , "pr1: " , pr1 , "pr2: " , pr2 , "stim_index: " , stim_index , "ampar_unbound: " , ampar_unbound , "nmdar_unbound: " , nmdar_unbound ) ;
@@ -423,7 +413,6 @@ static void initmodel() {
   nmdar_bound = nmdar_bound0;
  {
    stim_index = 0.0 ;
-   stimon = 0.0 ;
    ampar_active = 0.0 ;
    ampar_bound = 0.0 ;
    nmdar_active = 0.0 ;
@@ -563,7 +552,7 @@ for (_iml = 0; _iml < _cntml; ++_iml) {
  { {
  for (; t < _break; t += dt) {
  error =  state();
- if(error){fprintf(stderr,"at line 87 in file expsyn2c.mod:\n		SOLVE state METHOD cnexp\n"); nrn_complain(_p); abort_run(error);}
+ if(error){fprintf(stderr,"at line 88 in file expsyn2c.mod:\n		SOLVE state METHOD cnexp\n"); nrn_complain(_p); abort_run(error);}
  
 }}
  t = _save;
