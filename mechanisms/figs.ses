@@ -1,0 +1,126 @@
+{load_file("nrngui.hoc")}
+objectvar save_window_, rvp_
+objectvar scene_vector_[6]
+objectvar ocbox_, ocbox_list_, scene_, scene_list_
+{ocbox_list_ = new List()  scene_list_ = new List()}
+{pwman_place(0,0,0)}
+
+//Begin Grapher
+{
+load_file("grapher.hoc")}
+{
+ocbox_=new Grapher(1)
+
+ocbox_.info("vm","vm", "rates_km(vm) rate_cal(vm) rates_can(vm) rates_cat(vm)", 0, 10, -10, 10, 1000, -120, 100)
+{
+save_window_=ocbox_.g
+save_window_.size(0,10,-10,10)
+scene_vector_[2] = save_window_
+ocbox_.g = save_window_
+save_window_.save_name("ocbox_.g")
+save_window_.xexpr("vm", 0)
+save_window_.addexpr("ninf_km", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("minf_cal", 3, 1, 0.8, 0.9, 2)
+save_window_.addexpr("minf_can", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("hinf_can", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("minf_cat", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("hinf_cat", 1, 1, 0.8, 0.9, 2)
+}
+ocbox_ = ocbox_.vbox
+ocbox_.map("Grapher", 0, 0, 624, 662.4)
+}
+objref ocbox_
+//End Grapher
+
+
+//Begin Grapher
+{
+load_file("grapher.hoc")}
+{
+ocbox_=new Grapher(1)
+
+ocbox_.info("vm","vm", "rates_km(vm) rate_cal(vm) rates_can(vm) rates_cat(vm)", 0, 10, -10, 10, 1000, -120, 100)
+{
+save_window_=ocbox_.g
+save_window_.size(0,10,-10,10)
+scene_vector_[3] = save_window_
+ocbox_.g = save_window_
+save_window_.save_name("ocbox_.g")
+save_window_.xexpr("vm", 0)
+save_window_.addexpr("ntau_km", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("tau_cal", 3, 1, 0.8, 0.9, 2)
+save_window_.addexpr("taum_can", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("tauh_can", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("mtau_cat", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("htau_cat", 1, 1, 0.8, 0.9, 2)
+}
+ocbox_ = ocbox_.vbox
+ocbox_.map("Grapher", 0, 0, 579.84, 619.2)
+}
+objref ocbox_
+//End Grapher
+
+
+//Begin Grapher
+{
+load_file("grapher.hoc")}
+{
+ocbox_=new Grapher(1)
+
+ocbox_.info("vm","vm", "rates_ca1AH(vm) rates_kad(vm) rates_kap(vm)", -120, 100, 0, 1, 1000, -120, 100)
+{
+save_window_=ocbox_.g
+save_window_.size(0,10,-10,10)
+scene_vector_[4] = save_window_
+ocbox_.g = save_window_
+save_window_.save_name("ocbox_.g")
+save_window_.xexpr("vm", 0)
+save_window_.addexpr("apinf_ca1AH", 6, 1, 0.8, 0.9, 2)
+save_window_.addexpr("adinf_ca1AH", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("binf_ca1AH", 1, 1, 0.8, 0.9, 2)
+save_window_.addexpr("qsinf_ca1AH", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("qfinf_ca1AH", 3, 1, 0.8, 0.9, 2)
+save_window_.addexpr("ninf_kad", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("linf_kad", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("ninf_kap", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("linf_kap", 2, 1, 0.8, 0.9, 2)
+}
+ocbox_ = ocbox_.vbox
+ocbox_.map("Grapher", 429, 27, 757.44, 576)
+}
+objref ocbox_
+//End Grapher
+
+
+//Begin Grapher
+{
+load_file("grapher.hoc")}
+{
+ocbox_=new Grapher(1)
+
+ocbox_.info("vm","vm", "rates_ca1AH(vm) rates_kad(vm) rates_kap(vm)", -120, 100, 0, 760, 1000, -120, 100)
+{
+save_window_=ocbox_.g
+save_window_.size(0,10,-10,10)
+scene_vector_[5] = save_window_
+ocbox_.g = save_window_
+save_window_.save_name("ocbox_.g")
+save_window_.xexpr("vm", 0)
+save_window_.addexpr("aptau_ca1AH", 9, 1, 0.8, 0.9, 2)
+save_window_.addexpr("adtau_ca1AH", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("btau_ca1AH", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("qstau_ca1AH", 1, 1, 0.8, 0.9, 2)
+save_window_.addexpr("qftau_ca1AH", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("taun_kad", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("taul_kad", 6, 1, 0.8, 0.9, 2)
+save_window_.addexpr("taun_kap", 3, 1, 0.8, 0.9, 2)
+save_window_.addexpr("taul_kap", 6, 1, 0.8, 0.9, 2)
+}
+ocbox_ = ocbox_.vbox
+ocbox_.map("Grapher", 247, 120, 626.88, 566.4)
+}
+objref ocbox_
+//End Grapher
+
+objectvar scene_vector_[1]
+{doNotify()}

@@ -1,0 +1,98 @@
+/******************************************************************************
+Create totSyn number(here is 1000) synapses on either proximal apical dendrite,
+distal apical dendrite or basal dendrite (based on the flag "choice"). Also sets
+the synaptic weight following Type I or Type C model based on the value of MODELTYPE.
+MODELTYPE is inherited.
+Here each synapse is connected to individual NetStim cell
+******************************************************************************/
+
+//1 for apical dendrite(both main trunk & obl. branches) < TWO_THIRD_APIDEND
+//2 for apical dendrite(both main trunk & obl. branches) > TWO_THIRD_APIDEND
+//3 for basal dendrite
+choice = 1
+
+if (choice == 1 || choice == 2) {
+    BEGINSECTION= BASDENDMAX + 1
+    ENDSECTION= TOTALDEND - 1
+} else {
+    BEGINSECTION= 0
+    ENDSECTION= BASDENDMAX
+} 
+
+objref rc, rd
+rc = new Random()
+rc.MCellRan4(highindex+250)
+rc.uniform(BEGINSECTION, ENDSECTION) 
+rd = new Random()
+totSyn = 1000
+
+objref Ens[totSyn], syn[totSyn], nc[totSyn]
+double  synWt[totSyn]
+
+access soma
+soma distance()
+
+for (i=0; i <= totSyn-1; i +=1) {
+    count = 1
+    /*---------generate a syn at random section and random segment--*/
+	flag=0
+	while (flag==0) {
+		comp=int(rc.repick()+0.5)
+		dend[comp].sec {  //for now limiting syn loc 2/3 to soma
+		    rd.MCellRan4(highindex+i*15)
+		    rd.uniform(1, nseg+1)
+		    count = 0
+		    while (count <= nseg && flag==0) {
+			tmpnseg = int( rd.repick())
+			count += 1
+			tmp = (2*tmpnseg - 1)/(2*nseg)
+			if (choice == 1) { // shorter than 2/3 max. apical length   
+			    if (distance(tmp) < TWO_THIRD_APIDIST ) {flag=1} else {flag=0} //total length is up to 800uM
+			} else if (choice == 2) { // longer than 2/3 max. apical length
+			    if (distance(tmp) > TWO_THIRD_APIDIST ) {flag=1} else {flag=0} //total length is up to 800uM
+			} else { //basal dendrite
+			    flag = 1
+			}
+		    }
+		}
+	}//now right section, right segment has been found
+    
+    dend[comp].sec {
+	dist = distance(tmp)
+        Ens[i] = new NetStim(0.5)
+        Ens[i].interval=200
+        Ens[i].number = 1000000000000000000000000000000
+        Ens[i].start=0
+        Ens[i].noise=0
+
+        syn[i] = new Exp2Syn(tmp)
+        syn[i].e=0
+        syn[i].tau1 = TAU1
+        syn[i].tau2 = TAU2
+        nc[i] = new NetCon(Ens[i], syn[i])
+
+	/*-----------Setting up dist value based on Type I or Type C Model----------------------*/
+	if ( MODELTYPE == 1 ) {  //Type C Model
+		if (choice == 1) {  //within 2/3 proximal apical dendrite
+		    if (issection("apical_dendrite.*")) { //synapse on oblique branch
+			index = comp - BASDENDMAX - 1
+			user5[aplist.x[index]] dist = distance(1)
+		    } else { //synapse on main trunk user5
+			dist = distance(tmp)
+		    }
+
+		} else if (choice == 2) {  //on distal apical dendrite
+		    dist = TWO_THIRD_APIDIST
+		} else { //choice == 3
+		    dist = 0
+		}
+
+	} else {  //Type I Model
+		dist = distance(tmp)
+	}
+     
+	nc[i].weight =(A*dist*dist+B)/1e+06  //A, B have diff. values dep. on type I or C model
+
+    } 
+}
+

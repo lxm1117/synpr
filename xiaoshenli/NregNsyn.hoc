@@ -1,0 +1,26 @@
+/************************************************************************************
+Flag MODELTYPE to decide if Type I or Type C model to be loaded and createNewSyn.hoc
+& createNewSyn2.hoc set syn wt correspondly;
+0: Type I Model
+1: Type C Model
+2: Passive Model
+*************************************************************************************/
+printf("irregular & asynchronous input. frequency = %d \n", freq)
+
+objref r
+r = new Random()
+
+
+for i=0, totSyn-1 {  //totSyn is the total # of synapses
+	Ens[i].start=0 //Ens: the reference to the NetStim
+	Ens[i].number=1000000000000000000000000000000
+	Ens[i].noise=1
+}
+
+intv = 1000/freq
+for i=0, totSyn-1 {
+	Ens[i].interval = intv //set each syn. mean input intv
+	Ens[i].start = r.uniform(0, intv)
+}
+run()
+

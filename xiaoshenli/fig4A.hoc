@@ -1,0 +1,86 @@
+xopen("ModelTypeI.hoc")
+xopen("./createNewSyn.hoc")
+dt = 0.1
+steps_per_ms = 1/dt
+
+flag = 1
+
+proc NregNsyn() {
+    freq = $1
+    if (flag == 2) {
+	xopen("./createNewSyn.hoc")
+	flag = 1
+    }
+    xopen("./NregNsyn.hoc")
+}   
+
+proc Nregsyn() {
+    freq = $1
+    if (flag == 1) {
+	xopen("./createNewSyn2.hoc")
+	flag = 2
+    }
+    xopen("./Nregsyn.hoc")
+}   
+
+proc regNsyn() {
+    freq = $1
+    if (flag == 2) {
+	xopen("./createNewSyn.hoc")
+	flag = 1
+    }
+    xopen("./regNsyn.hoc")
+}   
+
+proc regsyn() {
+    freq = $1
+    if (flag == 2) {
+	xopen("./createNewSyn.hoc")
+	flag = 1
+    }
+    xopen("./exec.hoc")
+}   
+
+objref b
+b = new VBox()
+b.intercept(1)
+
+objref g
+g = new Graph(0)
+g.view(0, -80, tstop, 120, 50, 200, 300, 200)
+addplot(g, 0) //attach to standard run system
+g.size(0, tstop, -80, 40)
+g.addvar("axon", "axon[10].v(.5)")
+
+xpanel("", 1)
+xmenu("irreg & asyn")
+        xbutton("1 HZ", "NregNsyn(1)")
+        xbutton("4 HZ", "NregNsyn(4)")
+        xbutton("7 HZ", "NregNsyn(7)")
+        xbutton("10 HZ", "NregNsyn(10)")
+xmenu()
+
+xmenu("irreg & syn")
+        xbutton("1 HZ", "Nregsyn(1)")
+        xbutton("4 HZ", "Nregsyn(4)")
+        xbutton("7 HZ", "Nregsyn(7)")
+        xbutton("10 HZ", "Nregsyn(10)")
+xmenu()
+
+xmenu("regular & asyn")
+        xbutton("1 HZ", "regNsyn(1)")
+        xbutton("4 HZ", "regNsyn(4)")
+        xbutton("7 HZ", "regNsyn(7)")
+        xbutton("10 HZ", "regNsyn(10)")
+xmenu()
+
+xmenu("regular & syn")
+        xbutton("1 HZ", "regsyn(1)")
+        xbutton("4 HZ", "regsyn(4)")
+        xbutton("7 HZ", "regsyn(7)")
+        xbutton("10 HZ", "regsyn(10)")
+xmenu()
+xpanel()
+b.intercept(0)
+b.map()
+

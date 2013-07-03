@@ -1,0 +1,256 @@
+/****************************************************************
+Used in CA1Models/MiglioreNew2/
+cleaned up from Model.hoc. Has been tested to be correct
+Jan.9 2005
+Load a cell's morphology file and then load Type I biophysical model
+****************************************************************/
+/*--------------------playing random seed----------------*/
+MODELTYPE = 0
+use_mcell_ran4(1)
+lowindex = 1001
+mcell_ran4_init(lowindex)
+highindex = 1
+tstop = 250
+
+print "---------------------------Type I Model-----------------------------"
+
+//flag for wether or not to use NMDA-R: 0 for without NMDA-R, 1 for with NMDA-R
+//this flag will be used in subsequent hoc files: NregNsyn.hoc, Nregsyn.hoc etc
+NMDAFLAG = 0
+
+if (NMDAFLAG == 0) { //only AMPA-R
+    wtAmpa = 1
+    wtNmda = 0
+} else { //NMDAFLAG = 1, with both AMPA-R, NMDA-R
+    wtAmpa = 0.8
+    wtNmda = 0.2
+}
+
+xopen("./c20466.hoc")             // geometry file
+
+soma area(0.5) //make sure diam reflects 3d points
+
+//USER5MAX, APIDENDMAX, BASDENDMAX are set in cell's hoc file
+TOTALDEND = USER5MAX + APIDENDMAX + BASDENDMAX + 3 //"3": counting start at 0
+objref dend[TOTALDEND]
+
+/****************************************************************************
+Grouping dendritic sections together in an array dend, later for being used to
+randomly put synapses on the proximal apical, distal apical and basal dendrite
+*****************************************************************************/
+index = 0
+
+forsec "dendrite" { //this will includes both dendrites and apical-dendrites
+    dend[index] = new SectionRef()
+    index += 1
+}
+
+forsec "user5" {
+    dend[index] = new SectionRef()
+    index += 1
+} //now index = USER5MAX + 1
+
+//quadratic function fitting result A and B are set in cell's hoc file
+A = A0
+B = B0
+
+//synapse rise and decay time constants
+TAU1=0.2 //ms
+TAU2=10  //ms
+
+dist=1
+rel=0.1
+
+
+Rm = 28000    //unit: Ohm-cm^2
+RmDend = Rm/1
+RmSoma = Rm
+RmAx = Rm
+
+Cm    = 1
+CmSoma= Cm
+CmAx  = Cm
+CmDend = Cm*1
+
+RaAll= 50  //unit: Ohm-cm
+RaSoma=50  
+RaAx = 50
+
+Vrest = -65
+gna =  .02  //increasing Na+ channel density instead of decreasing KMULT from 0.025 to 0.015
+AXONM = 2
+gkdr = 0.01
+celsius = 35.0  
+KMULT =  0.025  //was 0.025
+KMULTP = 0.025  //was 0.025
+gcan=0.0//005
+gcal=0.0//005
+gcat=0.0//005
+ghd=0.00005
+nash=0
+
+forsec "axon" {
+                insert pas e_pas=Vrest g_pas = 1/RmAx Ra=RaAx cm=CmAx
+}
+
+forsec "soma" {
+                insert pas e_pas=Vrest g_pas = 1/RmSoma Ra=RaSoma cm=CmSoma
+}
+
+forsec "dendrite" {  //acidentally includes both dendrte and apical_dendrite, i.e. basal & oblique api.
+		insert pas e_pas=Vrest g_pas = 1/RmDend Ra=RaAll cm=CmDend
+}
+
+forsec "user5" {
+		insert pas e_pas=Vrest g_pas = 1/RmDend Ra=RaAll  cm=CmDend
+}
+
+
+access soma
+freq=50
+load_file("fixnseg.hoc")
+geom_nseg()
+
+tot=0
+forall {tot=tot+nseg}
+distance()
+maxdist=0
+forsec "user5" for(x) {if (distance(x)>maxdist) {maxdist=distance(x)}}
+printf ("total # of segments (%g hz): %g  \t max path distance:  %g\n", freq, tot, maxdist)
+
+/****************************************************************************************
+The following two lines of declaration are to match up ModelTypeC.hoc mapping bifurcation.
+They are not used in ModelTypeI.hoc & ModelPassive.hoc
+****************************************************************************************/
+objref  outfile, sref, blist[USER5MAX+1],   aplist
+strdef dend2, trunk
+
+
+forsec "axon" {   
+                insert nax gbar_nax=gna * AXONM	sh_nax=nash
+                insert kdr gkdrbar_kdr=gkdr
+                //insert pas e_pas=Vrest g_pas = 1/RmAx Ra=RaAx cm=CmAx
+                insert kap gkabar_kap = KMULTP*0.2
+}
+
+forsec "soma" {   
+		insert hd ghdbar_hd=ghd	vhalfl_hd=-73
+                insert na3 ar_na3=1 sh_na3=nash gbar_na3=gna
+                insert kdr gkdrbar_kdr=gkdr
+                insert kap gkabar_kap = KMULTP
+                //insert pas e_pas=Vrest g_pas = 1/RmSoma Ra=RaSoma cm=CmSoma
+}
+
+/*---------------------setting up apical oblique dendrite channel kinetics--------*/
+for (i=0; i<= APIDENDMAX; i += 1) {
+        access apical_dendrite[i] {
+	insert ds
+                if (diam>0.35) {factor=1} else {factor=1}
+                insert hd ghdbar_hd=ghd
+                insert na3 ar_na3=1 gbar_na3=gna*factor sh_na3=nash
+                insert kdr gkdrbar_kdr=gkdr*factor
+                insert kap gkabar_kap=0
+                insert kad gkabar_kad=0
+
+                for (x) if (x>0 && x<1) { xdist = distance(x)
+                        ghdbar_hd(x) = factor*ghd*(1+3*xdist/100)
+                                if (xdist > 100){
+                                        vhalfl_hd=-81
+                                        gkabar_kad(x) = factor*KMULT*(1+xdist/100)
+                                        } else {
+                                        vhalfl_hd=-73
+                                        gkabar_kap(x) = factor*KMULTP*(1+xdist/100)
+                                        }
+                }
+        }
+}
+
+
+/*---------------------setting up basal dendrite channel kinetics--------*/
+for (i=0; i <= BASDENDMAX; i += 1) { 
+	access dendrite[i] { 
+		if (diam>0.35) {factor=1} else {factor=1}
+		insert hd ghdbar_hd=ghd
+                insert na3 ar_na3=1 gbar_na3=gna*factor sh_na3=nash
+                insert kdr gkdrbar_kdr=gkdr*factor
+		insert kap gkabar_kap=0
+		insert kad gkabar_kad=0
+
+		for (x) if (x>0 && x<1) { xdist = distance(x)
+                	ghdbar_hd(x) = factor*ghd*(1+3*xdist/100)
+                		if (xdist > 100){
+					vhalfl_hd=-81
+                        		gkabar_kad(x) = factor*KMULT*(1+xdist/100)
+                			} else {
+					vhalfl_hd=-73
+                        		gkabar_kap(x) = factor*KMULTP*(1+xdist/100)
+               				}
+		}
+	}
+}
+
+/*----------------------------setting up main trunk channel kinetics-------------*/
+forsec "user5" {   // the main trunk
+	insert ds
+//	if (diam>0.5) {
+		insert hd ghdbar_hd=ghd
+                insert na3 ar_na3=1 gbar_na3=gna sh_na3=nash
+                insert kdr gkdrbar_kdr=gkdr
+		insert kap gkabar_kap=0
+		insert kad gkabar_kad=0
+
+		for (x) if (x>0 && x<1) { xdist = distance(x)
+                	ghdbar_hd(x) = ghd*(1+3*xdist/100)
+                		if (xdist > 100){
+					vhalfl_hd=-81
+                        		gkabar_kad(x) = KMULT*(1+xdist/100)
+                			} else {
+					vhalfl_hd=-73
+                        		gkabar_kap(x) = KMULTP*(1+xdist/100)
+               				}
+		}
+//	}
+}
+
+//correct the default section name
+access soma
+
+objref pw
+pw = new PWManager()
+pw.landscape(1)
+
+
+proc init() {
+	t=0
+        forall {
+        v=Vrest
+        if (ismembrane("nax") || ismembrane("na3")) {ena=55}
+        //if (ismembrane("na3")) {ar_na3 = 0.6}
+	
+        if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-90}
+        if (ismembrane("hd") ) {ehd_hd=-30}
+	}
+	finitialize(Vrest)
+        fcurrent()
+
+        forall {
+	for (x) {
+	if (ismembrane("na3")||ismembrane("nax")){e_pas(x)=v(x)+(ina(x)+ik(x))/g_pas(x)}
+	if (ismembrane("hd")) {e_pas(x)=e_pas(x)+i_hd(x)/g_pas(x)}
+		}
+	}
+	cvode.re_init()
+	cvode.event(tstop)
+	access soma
+//	g.begin()
+}
+
+
+proc advance() {
+	fadvance()
+//	g.plot(t)
+//	g.flush()
+//	p.flush()
+//	doNotify()
+}
+
