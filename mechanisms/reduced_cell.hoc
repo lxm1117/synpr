@@ -20,11 +20,11 @@ forsec "dend" {
 }
 
 objref sc[count]
-i=0
+index=0
 forsec "apical" {
-	sc[i]=new SectionRef()
-	if(sc[i].nchild()==0) {
-		print secname(), "  ", sc[i].nchild()
+	sc[index]=new SectionRef()
+	if(sc[index].nchild()==0) {
+		print secname(), "  ", sc[index].nchild()
 		sl.append()
 	}
 }
@@ -107,13 +107,13 @@ forsec "dend" {
 //sp.color_list(slist,2)
 
 objref syn[count]
-k=0
-forsec "apical" {
-	syn[k]=new expsyn2c(0.5)
-	syn[k].num=81
-	syn[k].interval=10	
-	syn[k].del=10
-	k+=1
+index=0
+forsec "dend" {
+	syn[index]=new expsyn2c(0.5)
+	syn[index].num=81
+	syn[index].interval=10	
+	syn[index].del=10
+	index+=1
 }	
 
 load_file("reduced_cell.ses")
