@@ -1,0 +1,559 @@
+/* For this file, random # : NMDAR : nonNMDAR : Neuronal : Glial 
+                    93     :  19   : 63       : 20       : 3740 
+*/
+/*Corresponding to README situation #3, model the concave containing vesicle
+  in presynapse, the concave doesn't change once the ligands are released.
+  Run for 100 msec. 
+*/
+
+scale = 0.99
+
+INCLUDE_FILE = "parameters" 
+
+/*Inserting checkpoint stuff, Dec9, 1998 */ 
+chkpt_it = 500000
+
+CHECKPOINT_INFILE = "chkpt"
+CHECKPOINT_OUTFILE = "chkpt"
+CHECKPOINT_ITERATIONS = chkpt_it
+/* Done inserting checkpoint stuff, Dec 9 ,1998 */  
+
+
+/* Do this on Jan 21, Fri, 2000, put neuronal and glial uptake rate constants *
+ * in nmda file, different random sequences correspond to different number of *
+ * uptake receptors and hence different rate constants. *
+ */
+/* For neuronal glutamate uptake,high affinity,ie. Km = 2 uM
+   Vmax = 80 uM/ms, # of receptors = 20  */
+ku1 = 1.887334e+10  /* (M^-1s^-1)*/
+ku2 = 0.0
+ku3 = 3.774668e+04  /* (s^-1) */ 
+
+/* For glia glutamate uptake,high affinity, ie. Km = 200 uM
+   Vmax = 240 uM/ms, # of receptors = 3740 */
+ku1G = 2.443263e+08  /* (M^-1s^-1) */ 
+ku2G = 0.0
+ku3G = 4.886526e+04  /* (s^-1) */ 
+
+/* Add receptor densities so keep a single parameters file */
+R_density = 600  /* NMDA receptor density, um^-2 */
+Rn_density = 2000 /* non-NMDA receptor density, um^-2 */ 
+
+
+TIME_STEP = dt
+ITERATIONS = it
+EFFECTOR_GRID_DENSITY = 6800   
+
+PARTITION_X = [-4.01,-2.44,-0.66,-0.26,-0.057,-0.023,-0.01,0.01,0.023,0.057,0.26,0.66,2.44,4.01]
+PARTITION_Y = [-4.01,-2.44,-0.66,-0.26,-0.057,-0.023,-0.01,0.01,0.023,0.057,0.26,0.66,2.44,4.01]
+PARTITION_Z = [-0.021,-0.01,0.025,0.051] 
+
+DEFINE_LIGAND glutamate {
+  DIFFUSION_CONSTANT = D
+}
+
+release_sampling_template BOX { 
+  CORNERS = [-vesicle_diameter/2,-vesicle_diameter/2,0], [vesicle_diameter/2,vesicle_diameter/2,vesicle_diameter]
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  } 
+}
+
+   
+ 
+
+DEFINE_REACTION NMDAR {
+  R[>AR{kon1:+glutamate,POSITIVE_POLE}]
+  AR[>R{koff1:-glutamate,POSITIVE_POLE}][>A2R{kon2:+glutamate,POSITIVE_POLE}][>AD{beta1}]  
+  
+  A2R[>AR{koff2:-glutamate,POSITIVE_POLE}][>A2Ro{beta}][>A2D{beta2}]
+  A2Ro[>A2R{alpha}][>A2Do{beta3}]
+  AD[>AR{alpha1}][>A2D{kon3:+glutamate,POSITIVE_POLE}]
+  A2D[>AD{koff3:-glutamate,POSITIVE_POLE}][>A2Do{beta4}][>A2R{alpha2}]
+  A2Do[>A2D{alpha4}][>A2Ro{alpha3}]
+
+  REFERENCE_STATE R {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+ 
+/*
+DEFINE_REACTION NMDAR {
+  R[>AR{kon1:+glutamate,POSITIVE_POLE}]
+  AR[>R{koff1:-glutamate,POSITIVE_POLE}][>A2R{kon2:+glutamate,POSITIVE_POLE}]
+  A2R[>AR{koff2:-glutamate,POSITIVE_POLE}][>A2Ro{beta}][>A2D{kd1}]
+  A2Ro[>A2R{alpha}][>A2D{kd2}]
+  A2D[>A2R{kr1}][>A2Ro{kr2}]
+
+  REFERENCE_STATE R {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+*/
+
+ 
+DEFINE_REACTION nonNMDAR { 
+  Rn[>ARn{Kon1:+glutamate,POSITIVE_POLE}]
+  ARn[>Rn{Koff1:-glutamate,POSITIVE_POLE}][>A2Rn{Kon2:+glutamate,POSITIVE_POLE}][>ADn{Beta1}]
+  A2Rn[>ARn{Koff2:-glutamate,POSITIVE_POLE}][>A2Rno{Beta}][>A2Dn{Beta2}]
+  A2Rno[>A2Rn{Alpha}][>A2Dno{Beta3}]
+  ADn[>ARn{Alpha1}][>A2Dn{Kon3:+glutamate,POSITIVE_POLE}]
+  A2Dn[>ADn{Koff3:-glutamate,POSITIVE_POLE}][>A2Dno{Beta4}][>A2Rn{Alpha2}]
+  A2Dno[>A2Dn{Alpha4}][>A2Rno{Alpha3}] 
+  
+  REFERENCE_STATE Rn {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+
+/*
+DEFINE_REACTION nonNMDAR {
+  Rn[>ARn{Kon1:+glutamate,POSITIVE_POLE}]
+  ARn[>Rn{Koff1:-glutamate,POSITIVE_POLE}][>A2Rn{Kon2:+glutamate,POSITIVE_POLE}][>ADn{Beta1}]
+  A2Rn[>ARn{Koff2:-glutamate,POSITIVE_POLE}][>A2Rno{Beta}][>A2Dn{Beta2}]
+  A2Rno[>A2Rn{Alpha}][>A2Dno{Beta3}]
+  ADn[>ARn{Alpha1}][>A2Dn{Kon3:+glutamate,POSITIVE_POLE}]
+  A2Dn[>ADn{Koff3:-glutamate,POSITIVE_POLE}][>A2Dno{Beta4}][>A2Rn{Alpha2}]
+  A2Dno[>A2Dn{Alpha4}][>A2Rno{Alpha3}]
+
+  REFERENCE_STATE Rn {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+*/  
+    
+DEFINE_REACTION N_Uptake {
+  E[>AE{ku1:+glutamate,POSITIVE_POLE}]
+  AE[>E{ku2:-glutamate,POSITIVE_POLE}][>E{ku3:#glutamate}] 
+  REFERENCE_STATE E {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+
+DEFINE_REACTION G_Uptake {
+  Eg[>AEg{ku1G:+glutamate,POSITIVE_POLE}]
+  AEg[>Eg{ku2G:-glutamate,POSITIVE_POLE}][>Eg{ku3G:#glutamate}] 
+  REFERENCE_STATE Eg {
+    glutamate NUMBER_BOUND = 0
+  }
+}
+
+/* Template for PSD, these are the "peripheral" four boxes that surround  
+   the middle small one which has identical top area as release box, together
+   these five boxes form the PSD box.    
+   The four peripheral boxes are built by rotation.   
+*/ 
+PSD_cleft_template_box BOX { 
+  CORNERS = [L_X1,L_Y1,-cleft],[R_X1,R_Y1,0] 
+  FULLY_CLOSED = YES
+  REMOVE_ELEMENT = FRONT 
+  REMOVE_ELEMENT = BACK 
+  REMOVE_ELEMENT = LEFT 
+  REMOVE_ELEMENT = RIGHT  
+  ADD_EFFECTOR { 
+    STATE = NMDAR.R
+    DENSITY = R_density
+    ELEMENT = BOTTOM
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+  ADD_EFFECTOR {
+    STATE = nonNMDAR.Rn
+    DENSITY = Rn_density
+    ELEMENT = BOTTOM
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+  ADD_EFFECTOR {
+    STATE = N_Uptake.E
+    DENSITY = N_Uptake_E_density
+    ELEMENT = TOP 
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+    
+}
+
+PSD_sampling_template BOX {
+  CORNERS = [(R_X1*(1-scale)+L_X1*(1+scale))/2,(R_Y1*(1-scale)+L_Y1*(1+scale))/2,-cleft*(1+scale)/2],[(R_X1*(1+scale)+L_X1*(1-scale))/2,(R_Y1*(1+scale)+L_Y1*(1-scale))/2,-cleft*(1-scale)/2] 
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  }
+}
+
+
+/* This is the template specifically for the  box that "plugs" into the 
+   bottom surface of release box, 
+   in addition to removal of the vertical walls, it also removes
+   its TOP to allow ligands to diffuse in. 
+*/
+PSD_cleft_template_box0 BOX { 
+  CORNERS = [-Rex,-Rex,-cleft],[Rex,Rex,0] 
+  FULLY_CLOSED = YES
+  REMOVE_ELEMENT = FRONT 
+  REMOVE_ELEMENT = BACK 
+  REMOVE_ELEMENT = LEFT 
+  REMOVE_ELEMENT = RIGHT  
+  REMOVE_ELEMENT = TOP   
+  ADD_EFFECTOR { 
+    STATE = NMDAR.R
+    DENSITY = R_density
+    ELEMENT = BOTTOM
+    POLE_ORIENTATION = POSITIVE_BACK
+  } 
+  ADD_EFFECTOR {
+    STATE = nonNMDAR.Rn
+    DENSITY = Rn_density
+    ELEMENT = BOTTOM
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+}
+
+PSD_sampling_template0 BOX {
+/*  CORNERS = [-Rex,-Rex,-cleft],[Rex,Rex,0] */ 
+  CORNERS = [-Rex*scale,-Rex*scale,-cleft*(1+scale)/2],[Rex*scale,Rex*scale,-cleft*(1-scale)/2]  
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  }
+/*  SCALE = [scale,scale,scale] */     
+}
+
+
+/* Template for neuronal uptake */ 
+N_cleft_template_box BOX { 
+  CORNERS = [L_X2,L_Y2,-cleft],[R_X2,R_Y2,0] 
+  FULLY_CLOSED = YES
+  REMOVE_ELEMENT = FRONT 
+  REMOVE_ELEMENT = BACK 
+  REMOVE_ELEMENT = LEFT 
+  REMOVE_ELEMENT = RIGHT 
+  ADD_EFFECTOR {
+    STATE = N_Uptake.E
+    DENSITY = N_Uptake_E_density
+    ELEMENT = TOP 
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+
+}
+
+N_sampling_template BOX {
+  CORNERS = [(R_X2*(1-scale)+L_X2*(1+scale))/2,(R_Y2*(1-scale)+L_Y2*(1+scale))/2,-cleft*(1+scale)/2],[(R_X2*(1+scale)+L_X2*(1-scale))/2,(R_Y2*(1+scale)+L_Y2*(1-scale))/2,-cleft*(1-scale)/2] 
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  }
+}
+
+
+/* Template for glial uptake */ 
+G_cleft_template_box BOX { 
+  CORNERS = [L_X3,L_Y3,-cleft],[R_X3,R_Y3,0]
+  FULLY_CLOSED = YES
+  REMOVE_ELEMENT = FRONT 
+  REMOVE_ELEMENT = BACK 
+  REMOVE_ELEMENT = LEFT 
+  REMOVE_ELEMENT = RIGHT  
+  ADD_EFFECTOR {
+    STATE = G_Uptake.Eg
+    DENSITY = G_Uptake_E_density
+    ELEMENT = TOP 
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+
+}
+
+G_sampling_template BOX {
+  CORNERS = [(R_X3*(1-scale)+L_X3*(1+scale))/2,(R_Y3*(1-scale)+L_Y3*(1+scale))/2,-cleft*(1+scale)/2],[(R_X3*(1+scale)+L_X3*(1-scale))/2,(R_Y3*(1+scale)+L_Y3*(1-scale))/2,-cleft*(1-scale)/2] 
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  }
+}
+
+/* The template for boundary of whole cleft box, it's actually the right part
+   of those four boundary boxes, anticlockwise rotation. 
+*/ 
+Whole_cleft_boundary_template_box BOX {
+  CORNERS = [L_X4,L_Y4,-cleft],[R_X4,R_Y4,0] 
+  FULLY_CLOSED = YES 
+  REMOVE_ELEMENT = FRONT 
+  REMOVE_ELEMENT = LEFT 
+  ABSORPTIVE { 
+    LIGAND = glutamate 
+    ELEMENT = BACK 
+  }  
+  ABSORPTIVE { 
+    LIGAND = glutamate 
+    ELEMENT = RIGHT  
+  }  
+  ADD_EFFECTOR {
+    STATE = G_Uptake.Eg
+    DENSITY = G_Uptake_E_density
+    ELEMENT = TOP
+    POLE_ORIENTATION = POSITIVE_BACK
+  }
+}
+
+Whole_sampling_template BOX {
+  CORNERS = [(R_X4*(1-scale)+L_X4*(1+scale))/2,(R_Y4*(1-scale)+L_Y4*(1+scale))/2,-cleft*(1+scale)/2],[(R_X4*(1+scale)+L_X4*(1-scale))/2,(R_Y4*(1+scale)+L_Y4*(1-scale))/2,-cleft*(1-scale)/2] 
+  FULLY_CLOSED = YES
+  TRANSPARENT {
+    LIGAND = glutamate
+    ELEMENT = ALL_ELEMENTS
+  }
+}
+
+
+/* one train releases, 8 pulses at 100 Hz per train, total 8 pulses */
+DEFINE_RELEASE_PATTERN tetanus { 
+/*  DELAY = 1.0e-6 */ 
+  DELAY = 0.0 
+  RELEASE_INTERVAL = 0.010
+/*
+  RELEASE_INTERVAL = 0.0025
+  RELEASE_INTERVAL = 0.005
+  RELEASE_INTERVAL = 0.010
+  RELEASE_INTERVAL = 0.020
+  RELEASE_INTERVAL = 0.050
+  RELEASE_INTERVAL = 0.100
+*/
+  TRAIN_INTERVAL = 1.0
+  TRAIN_DURATION = 0.7901
+/*
+  TRAIN_DURATION = 0.01751
+  TRAIN_DURATION = 0.0351
+  TRAIN_DURATION = 0.0701
+  TRAIN_DURATION = 0.1401
+  TRAIN_DURATION = 0.3501
+  TRAIN_DURATION = 0.7001
+*/
+  NUMBER_OF_TRAINS = 1 
+} 
+/* Modeling synapse begins */
+INSTANTIATE synapse OBJECT {
+  glutamate_release_site SPHERICAL_RELEASE_SITE {
+    LOCATION = [0,0,vesicle_diameter/2]
+    LIGAND = glutamate 
+    NUMBER_TO_RELEASE = n
+    SITE_DIAMETER = vesicle_diameter 
+    RELEASE_PATTERN = tetanus 
+  }
+  release_site_box BOX { 
+    CORNERS = [-vesicle_diameter/2,-vesicle_diameter/2,0], [vesicle_diameter/2,vesicle_diameter/2,vesicle_diameter]
+    FULLY_CLOSED = YES
+    /*TRANSPARENT { 
+       LIGAND = glutamate
+       ELEMENT = BOTTOM 
+    } 
+    */
+    REMOVE_ELEMENT = BOTTOM 
+  }
+/*  release_sampling_box OBJECT {
+    mm OBJECT release_sampling_template {
+       SCALE = [scale,scale,scale]
+    }
+  }
+*/ 
+
+  PSD OBJECT { 
+    psd_0 OBJECT PSD_cleft_template_box0 { TRANSLATE = [0,0,0] }  
+    psd_1 OBJECT PSD_cleft_template_box { ROTATE = [0,0,1.0], 0 }  
+    psd_2 OBJECT PSD_cleft_template_box { ROTATE = [0,0,1.0], 90 }  
+    psd_3 OBJECT PSD_cleft_template_box { ROTATE = [0,0,1.0], 180 }  
+    psd_4 OBJECT PSD_cleft_template_box { ROTATE = [0,0,1.0], 270 }  
+  } /*end of PSD OBJECT */ 
+/*  PSD_sampling OBJECT {  
+    psds_0 OBJECT PSD_sampling_template0 { TRANSLATE = [0,0,0] } 
+    psds_1 OBJECT PSD_sampling_template { ROTATE = [0,0,1.0], 0 }  
+    psds_2 OBJECT PSD_sampling_template { ROTATE = [0,0,1.0], 90 }  
+    psds_3 OBJECT PSD_sampling_template { ROTATE = [0,0,1.0], 180 }  
+    psds_4 OBJECT PSD_sampling_template { ROTATE = [0,0,1.0], 270 }  
+  } */    
+  neuronal_uptake OBJECT { 
+    nu_1 OBJECT N_cleft_template_box { ROTATE = [0,0,1.0], 0 }  
+    nu_2 OBJECT N_cleft_template_box { ROTATE = [0,0,1.0], 90 }  
+    nu_3 OBJECT N_cleft_template_box { ROTATE = [0,0,1.0], 180 }  
+    nu_4 OBJECT N_cleft_template_box { ROTATE = [0,0,1.0], 270 }  
+  } /* end of neuronal uptake */ 
+/*  neuronal_sampling OBJECT { 
+    nus_1 OBJECT N_sampling_template { ROTATE = [0,0,1.0], 0 }  
+    nus_2 OBJECT N_sampling_template { ROTATE = [0,0,1.0], 90 }  
+    nus_3 OBJECT N_sampling_template { ROTATE = [0,0,1.0], 180 }  
+    nus_4 OBJECT N_sampling_template { ROTATE = [0,0,1.0], 270 }  
+  } */ 
+ 
+  glial_uptake OBJECT { 
+    gu_1 OBJECT G_cleft_template_box { ROTATE = [0,0,1.0], 0 } 
+    gu_2 OBJECT G_cleft_template_box { ROTATE = [0,0,1.0], 90 } 
+    gu_3 OBJECT G_cleft_template_box { ROTATE = [0,0,1.0], 180 } 
+    gu_4 OBJECT G_cleft_template_box { ROTATE = [0,0,1.0], 270 } 
+  } /* end of glial uptake */ 
+/*  glial_sampling OBJECT {  
+    gus_1 OBJECT G_sampling_template { ROTATE = [0,0,1.0], 0 }   
+    gus_2 OBJECT G_sampling_template { ROTATE = [0,0,1.0], 90 }   
+    gus_3 OBJECT G_sampling_template { ROTATE = [0,0,1.0], 180 }   
+    gus_4 OBJECT G_sampling_template { ROTATE = [0,0,1.0], 270 }   
+  } */ 
+  
+  whole_synaptic_space_boundary OBJECT { 
+   wssb_1 OBJECT Whole_cleft_boundary_template_box { ROTATE = [0,0,1.0], 0 } 
+   wssb_2 OBJECT Whole_cleft_boundary_template_box { ROTATE = [0,0,1.0], 90 } 
+   wssb_3 OBJECT Whole_cleft_boundary_template_box { ROTATE = [0,0,1.0], 180 } 
+   wssb_4 OBJECT Whole_cleft_boundary_template_box { ROTATE = [0,0,1.0], 270 }
+  } 
+   /* end of whole synaptic cleft, inner + boundary boxes */   
+/*  whole_boundary_sampling OBJECT { 
+   wssbs_1 OBJECT Whole_sampling_template { ROTATE = [0,0,1.0], 0 }    
+   wssbs_2 OBJECT Whole_sampling_template { ROTATE = [0,0,1.0], 90 }    
+   wssbs_3 OBJECT Whole_sampling_template { ROTATE = [0,0,1.0], 180 }    
+   wssbs_4 OBJECT Whole_sampling_template { ROTATE = [0,0,1.0], 270 }    
+  } */  
+
+}
+
+/*visulization*/
+/*
+VIZ_DATA_OUTPUT {
+  MODE = DX
+  OBJECT_FILE_DESIGNATORS {
+        synapse.release_site_box = "synapse_release" 
+  */    /*  synapse.PSD = "synapse_psd" */
+  /*      synapse.PSD.psd_0 = "synapse_psd0"
+        synapse.PSD.psd_1 = "synapse_psd1"
+        synapse.PSD.psd_2 = "synapse_psd2"
+        synapse.PSD.psd_3 = "synapse_psd3"
+        synapse.PSD.psd_4 = "synapse_psd4"
+  */    /*  synapse.neuronal_uptake = "synapse_neuro" */
+  /*      synapse.neuronal_uptake.nu_1 = "synapse_neuro1"
+        synapse.neuronal_uptake.nu_2 = "synapse_neuro2"
+        synapse.neuronal_uptake.nu_3 = "synapse_neuro3"
+        synapse.neuronal_uptake.nu_4 = "synapse_neuro4"
+  */    /*  synapse.glial_uptake = "synapse_glial" */
+  /*      synapse.glial_uptake.gu_1 = "synapse_glial1"
+        synapse.glial_uptake.gu_2 = "synapse_glial2"
+        synapse.glial_uptake.gu_3 = "synapse_glial3"
+        synapse.glial_uptake.gu_4 = "synapse_glial4"
+  */   /*   synapse.whole_synaptic_space_boundary = "synapse_bound" */ 
+  /*      synapse.whole_synaptic_space_boundary.wssb_1 = "synapse_bound1"
+        synapse.whole_synaptic_space_boundary.wssb_2 = "synapse_bound2"
+        synapse.whole_synaptic_space_boundary.wssb_3 = "synapse_bound3"
+        synapse.whole_synaptic_space_boundary.wssb_4 = "synapse_bound4"
+  } 
+
+  STATE_VALUES {
+	synapse.release_site_box = 1
+	synapse.PSD.psd_0 = 2
+	synapse.PSD.psd_1 = 2
+	synapse.PSD.psd_2 = 2
+	synapse.PSD.psd_3 = 2
+	synapse.PSD.psd_4 = 2
+	synapse.neuronal_uptake.nu_1 = 3
+	synapse.neuronal_uptake.nu_2 = 3
+	synapse.neuronal_uptake.nu_3 = 3
+	synapse.neuronal_uptake.nu_4 = 3
+	synapse.glial_uptake.gu_1 = 4
+	synapse.glial_uptake.gu_2 = 4
+	synapse.glial_uptake.gu_3 = 4
+	synapse.glial_uptake.gu_4 = 4
+	synapse.whole_synaptic_space_boundary.wssb_1 = 5
+	synapse.whole_synaptic_space_boundary.wssb_2 = 5
+	synapse.whole_synaptic_space_boundary.wssb_3 = 5
+	synapse.whole_synaptic_space_boundary.wssb_4 = 5
+	glutamate = 1 
+        NMDAR.R = 1 
+        NMDAR.AR = 2 
+        NMDAR.A2R = 3
+        NMDAR.A2Ro = 4
+        NMDAR.AD = 5
+        NMDAR.A2D = 6 
+        NMDAR.A2Do = 7
+	nonNMDAR.Rn = 8
+	nonNMDAR.ARn = 9       
+	nonNMDAR.A2Rn = 10
+	nonNMDAR.A2Rno = 11
+	nonNMDAR.ADn = 12
+	nonNMDAR.A2Dn = 13
+	nonNMDAR.A2Dno = 14
+	N_Uptake.E = 15
+	N_Uptake.AE = 16
+	G_Uptake.Eg = 17
+	G_Uptake.AEg = 18
+  }
+  ITERATION_FRAME_DATA {
+    SURFACE_POSITIONS = [0]
+    EFFECTOR_POSITIONS = [0]
+*/
+/*
+    EFFECTOR_STATES = [[0 TO 20000 STEP 1000]]
+    LIGAND_POSITIONS = [[0 TO 20000 STEP 1000]]
+    LIGAND_STATES = [[0 TO 20000 STEP 1000]]
+*/
+/*
+    EFFECTOR_STATES = [1,[1000 TO 20000 STEP 1000]]
+    LIGAND_POSITIONS = [1,[1000 TO 20000 STEP 1000]]
+    LIGAND_STATES = [1,[1000 TO 20000 STEP 1000]]
+*/
+
+/*
+    EFFECTOR_STATES = [1,[0 TO 20000 STEP 1000]]
+    LIGAND_POSITIONS = [1,[0 TO 20000 STEP 1000]]
+    LIGAND_STATES = [1,[0 TO 20000 STEP 1000]]
+
+  }
+
+}
+ 
+*/
+
+REACTION_DATA_OUTPUT {
+  STEP = 10.0*dt
+/*  { COUNT[glutamate,synapse.sampling_box.mm,FOR_EACH_TIME_STEP]} => "vesicle.glutamate"
+*/   
+/*  { COUNT[glutamate,synapse.sampling_box1.mmm,FOR_EACH_TIME_STEP]} => "cleft.glutamate" */   
+/*  { COUNT[glutamate,synapse.synaptic_cleft,FOR_EACH_TIME_STEP]} => "cleft.glutamate"  
+  { COUNT[glutamate,synapse.glia_uptake,FOR_EACH_TIME_STEP]} => "glia.glutamate"  
+  { COUNT[glutamate,synapse.neuronal_uptake,FOR_EACH_TIME_STEP]} => "neuronal.glutamate"
+*/
+  
+/* The above count should become almost zero within 0.5-1.0 msec after release
+*/  
+  { COUNT[NMDAR.A2Ro,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Ro"
+/*  { COUNT[NMDAR.A2R,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2R"
+  { COUNT[NMDAR.AR,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".AR"
+  { COUNT[NMDAR.A2Do,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Do"
+  { COUNT[NMDAR.A2D,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2D"
+  { COUNT[NMDAR.AD,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".AD"
+  { COUNT[NMDAR.R,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".R"
+*/
+
+/*  { COUNT[NMDAR.A2Do,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Do"
+  { COUNT[NMDAR.A2Ro,WORLD,FOR_EACH_TIME_STEP] + COUNT[NMDAR.A2Do,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Ro_and_A2Do"
+*/ 
+/*{ COUNT[glutamate,synapse,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".all_glutamate"
+*/  
+/*  { COUNT[nonNMDAR.A2Rno,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Rno"
+*/
+/*  { COUNT[nonNMDAR.A2Dno,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Dno"
+  { COUNT[nonNMDAR.A2Rno,WORLD,FOR_EACH_TIME_STEP] + COUNT[nonNMDAR.A2Dno,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".A2Rno_and_A2Dno"
+ */
+/* { COUNT[nonNMDAR.Rn,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".Rn"
+ { COUNT[NMDAR.R,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".R"
+ { COUNT[N_Uptake.E,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".E"  
+ { COUNT[G_Uptake.Eg,WORLD,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".Eg"
+*/  
+/* { COUNT[glutamate,synapse.PSD_sampling.psds_0,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.PSD_sampling.psds_1,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.PSD_sampling.psds_2,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.PSD_sampling.psds_3,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.PSD_sampling.psds_4,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".psd_glutamate"      
+ { COUNT[glutamate,synapse.neuronal_sampling.nus_1,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.neuronal_sampling.nus_2,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.neuronal_sampling.nus_3,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.neuronal_sampling.nus_4,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".nu_glutamate"  
+ 
+ { COUNT[glutamate,synapse.glial_sampling.gus_1,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.glial_sampling.gus_2,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.glial_sampling.gus_3,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.glial_sampling.gus_4,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".gu_glutamate"  
+ { COUNT[glutamate,synapse.whole_boundary_sampling.wssbs_1,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.whole_boundary_sampling.wssbs_2,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.whole_boundary_sampling.wssbs_3,FOR_EACH_TIME_STEP] + COUNT[glutamate,synapse.whole_boundary_sampling.wssbs_4,FOR_EACH_TIME_STEP] } => INPUT_FILE & ".wb_glutamate"   
+     
+ { COUNT[glutamate,synapse.release_sampling_box.mm,FOR_EACH_TIME_STEP] } => INPUT_FILE &."release_glutamate"   
+*/
+ 
+}    
+  

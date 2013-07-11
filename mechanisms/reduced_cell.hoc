@@ -1,20 +1,108 @@
 load_file("nrngui.hoc")
 load_file("n400td-pc2-mM-axn.hoc")
 forall{ nseg=int((L/(0.1*lambda_f(100))+0.9)/2)*2+1}
-forall {Rm=12000
-	Cm=1
-	Ra=100
-	insert pas
-	e_pas=-65
-	g_pas=1/Rm
+
+v_init=-70
+G_Ra=64
+G_cm=1 //.38
+G_Rm=225000
+factor=.35
+
+tstop=80
+dt=.01
+
+forall {
+        Ra = G_Ra
+        cm = G_cm
+	insert pas 
+	g_pas = 1/G_Rm
+	//e_pas = v_init
 }
 
-count=0
+/*
+proc Spine_Comp_RmCm() { local comp_Fac
+
+     ave_sp_area = 1.0
+     area_tot = 0
+     TSarea= 0
+     TSnum 	= 0
+     sp_adj 	= 0.7
+     dfactor	= 1
+     distance( 0, 0.5 )
+
+     forsec "dend" {
+        dist = distance( 1 )
+        adj_diam = diam / dfactor
+        spf=0
+
+        ifsec "dend_basal" {
+           if (adj_diam < 0.5) { spf=3.08*sp_adj }  			//SO-thin
+           if (adj_diam >=0.5) { spf=0.64*sp_adj }  			//SO-thick
+        }
+ 
+        ifsec "dend_apical" {
+           if (adj_diam > 0.99 && dist < 100) {       		//RTP
+              spf	= 0.03*sp_adj
+           }
+           if (adj_diam < 0.6 && dist < 850) {        		//R-thin
+              spf	= 3.52*sp_adj
+           }
+           if (dist >= 850)  { 
+              spf = 0.37*sp_adj                            		// LM-thin
+              if (adj_diam > 0.4) { spf =  0.6*sp_adj }  		// LM-med
+              if (adj_diam > 0.6) { spf =  1.72*sp_adj } 		// LM-think
+           }
+           if (dist >= 100 && dist < 500 && adj_diam > 0.6) {
+              spf = 2.37*sp_adj                                     	// RTM
+           }
+           if( dist >= 500 && dist < 850) {
+              if( adj_diam > 0.7 ) { spf = 4.0*sp_adj }          	//RTD
+              if( adj_diam > 1 )  { spf = 6.98*sp_adj }           	//RTD-fatter
+           }
+        }
+
+        comp_Fac	= ( area(.5) + spf*L*ave_sp_area )/(area(.5))
+        cm 		= comp_Fac * cm
+        g_pas 	= comp_Fac * g_pas
+        area_tot 	= area_tot + (area(.5))
+        TSnum 	= TSnum + spf*L
+        TSarea	+= spf*L*ave_sp_area + (area(.5))
+        }
+     }
+     print "area_tot= ", area_tot, "TSarea= ", TSarea, "TSnum= ", TSnum
+}
+*/
+
+proc init() {local dtsav, temp
+     finitialize(v_init)
+     t=-1e10
+     dtsav=dt
+     dt=1e10
+     // if cvode is on, turn it off to do large fixed step
+    temp=cvode.active()
+    if (temp!=0) { cvode.active(0) }
+     while (t<-1e9) {
+        fadvance()
+     //forall e_pas=Epas_epasn
+     }
+     //restpre cvode if necessary
+     if (temp!=0) { cvode.active(1) } 
+     dt=dtsav
+     t=0
+     if (cvode.active()) {
+         cvode.re_init()
+     } else {
+       fcurrent()
+     }
+     //forall e_pas=Epas_epasn
+     frecord_init()     
+}
+
+
 
 objref sl, sp
 sl=new SectionList()
-//sp=new PlotShape()
-
+count=0
 forsec "dend" {
 	count+=1
 }
@@ -38,20 +126,18 @@ forsec sl {
 	}
 }
 
-//encode spine
-
-
-Vrest=-65
+Vrest=-70
 celsius = 34.0  
 KMULTP=0.048
 KMULT=0.048
-gna = 0.032
+
+/*gna = 0.032
 gkdr = 0.01
 ghd=0.00005
 gcan=0.0005
 gcal=0.0005
 gcat=0.0005
-
+*/
 
 //active mechanisms
 objref axon_list
@@ -61,52 +147,74 @@ forsec "axon_iseg" {axon_list.append()}
 forsec "axon_inode" {axon_list.append()}
 
 forsec axon_list {
-	insert nax  gbar_nax=gna
-	insert kdr  gkdrbar_gkdr=gkdr
-	insert kap  gkabar_kap=KMULTP*0.2 
+	insert nax  gbar_nax=100*1e-3
+	insert kdr  gkdrbar_gkdr=20*1e-3
+	//insert kap  gkabar_kap=KMULTP*0.2 
+	insert km gbar_km=30*1e-3/1e-6
+	ena=50
+	ek=-80
 }
 
 forsec "soma" {
-	insert hd  ghdbar_hd=ghd vhalfl_hd=-73
-	insert nax gbar_nax=gna
-	insert kdr gkdrbar_kdr=gkdr
-	insert kap gkabar_kap=KMULTP
-	insert can gcanbar_can=gcan				
-	insert cal gcalbar_cal=gcal
-	insert cat gcatbar_cat=gcat	
+	insert hd  ghdbar_hd=18.72*1e-3 //vhalfl_hd=-73
+	insert nax gbar_nax=7*1e-3
+	insert kdr gkdrbar_kdr=1.4*1e-3
+	insert kap gkabar_kap=7.5*1e-3 //KMULTP
+	//insert can gcanbar_can=gcan				
+	insert cal gcalbar_cal=7.316*1e-3
+	insert cat gcatbar_cat=0.05*1e-3
+	insert km  gbar_km=60*1e-3/1e-6
+	//assume medium kca channel	
+	insert kca gbar_kca=90.75*1e-3/1e-6
+	ena=50
+	ek=-80
+	eca=140		
 }
 
 objref strobj
 strobj=new StringFunctions()
 
 forsec "dend" {
-	insert hd ghdbar_hd=ghd vhalfl_hd=-73	
-	insert nax  gbar_nax=soma.gbar_nax
-	insert cat  gcatbar_cat=soma.gcatbar_cat
-	insert kdr  gkdrbar_kdr=soma.gkdrbar_kdr
-	insert kap  gkabar_kap=soma.gkabar_kap
-	insert kad
-	insert can  gcanbar_can=gcan	
+	insert hd ghdbar_hd=18.72*1e-3 //vhalfl_hd=-73	
+	insert nax  gbar_nax=7*1e-3
+	insert kdr  gkdrbar_kdr=0.867*1e-3
 
-	for (x) if (x>0 && x<1) {
-		xdist=distance(x)
-		//if (xdist > 350) {xdist=350}
-		ghdbar_hd(x)=soma.ghdbar_hd*(1+3/0.4*xdist/max_distance)
-		if(strobj.substr(secname(),"apical")>=0){
-			if(xdist>100) {          //distal apical
-				vhalf_hd=-81
-				gkabar_kad(x)=KMULT*(1+4/0.6*xdist/max_distance)
+	ifsec "dend_apical" {	
+		for (x) if (x>0 && x<1) {
+
+			//ghdbar_hd(x)=soma.ghdbar_hd*(1+3/0.4*xdist/max_distance)
+			ghdbar_hd=30.5*1e-3	
+			g_pas=6.94e-3
+			insert cat gcatbar_cat=0.179*1e-3
+			insert kad
+			insert cal
+			insert kca gbar_kca=18.5*1e-3/1e-6
+			insert km  gbar_km=60*1e-3/1e-6
+		
+			xdist=distance(x)
+			if(xdist<300) {          
+
+					//gkabar_kad(x)=KMULT*(1+4/0.6*xdist/max_distance)
+					gkabar_kad=27.285*1e-3
+					gcalbar_cal=1.455*1e-3
 			} else{
-				vhalfl_hd=-73	 //proximal apical
-				gkabar_kap(x)=KMULTP*(1+4/0.6*xdist/max_distance)
+
+					//gkabar_kap(x)=KMULTP*(1+4/0.6*xdist/max_distance)
+					gkbar_kad=67.4*1e-3
+					gcalbar_cal=20.37*1e-3
 			}
 		}
+	ena=50
+	ek=-80
+	eca=140	
 	}
+
+
+
 }
 
-//sp.color_list(slist,2)
+/*objref syn[count]
 
-objref syn[count]
 index=0
 forsec "dend" {
 	syn[index]=new expsyn2c(0.5)
@@ -115,6 +223,9 @@ forsec "dend" {
 	syn[index].del=10
 	index+=1
 }	
-
-load_file("reduced_cell.ses")
+*/
+init()
+forall e_pas=v
+//Spine_Comp_RmCm()
+//load_file("reduced_cell.ses")
 

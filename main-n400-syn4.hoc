@@ -1,0 +1,342 @@
+/* ================================================================================
+   Run cell n400 with 
+     - Passive props
+       G_Ra, G_cm, G_Rm, G_e_pas
+          g_pas density increases linearly
+       	  g_pas = 1/G_Rm * ( 1 + Rm_slope * distance2soma )
+
+     - RmCm spine compensation based on Gulyas data
+
+     - h channel based on Vasilyev 2002 and Surges 2002.
+          h density increases linearly
+	  gbar_fast_h = h_factor * G_gbar_fast * ( 1 + h_slope * distance(0) )
+	  gbar_slow_h = h_factor * G_gbar_slow * ( 1 + h_slope * distance(0) )
+
+   Designed to be used in conjunction with MulRunFitter.
+   The generator should set h_flag according to condition:
+     h_flag > 0 is ACSF; h_flag < 0 for zd7288
+   init() was redefined to set the appropriate condition and 
+     to iterate in negative time to find stable resting potential
+   
+  based on /maxb/holmes/n400/072203b/main0722vc.hoc
+  ================================================================================ */
+
+load_file( "nrngui.hoc" )
+print " load nrngui "
+print " load n400 "
+load_file( "/axon/d2/cNeuro/MCells/hoc_CA1/n400td-pc2-sp.hoc" )
+print " post load n400 "
+access soma
+nstr=20
+invl=1
+TSyn=15
+tau11=.2
+tau22=5
+
+//synapses
+
+objref spine_heads, sh, spine_necks, sn
+nsyn=0
+spine_heads = new List()
+spine_necks = new List()
+forsec "sph" {
+        sh = new SectionRef()
+        nsyn=nsyn+1
+        spine_heads.append(sh)
+ }
+forsec "spn" {
+        sn = new SectionRef()
+        spine_necks.append(sn)
+ }
+
+
+objref syn[nsyn]
+
+        for i = 0,nsyn-1 {
+                spine_heads.object(i).sec { syn[i] = new expsyn2b(1.0) }
+		syn[i].gmax=0
+		syn[i].gmax2=0
+                if(spine_necks.object(i).sec.diam == 0.2) {
+			syn[i].tau1=0.34  
+			syn[i].tau2=1.65  
+			syn[i].tau3=3.50  
+			syn[i].tau4=40.0  
+                }
+                if(spine_necks.object(i).sec.diam == 0.32) {
+			syn[i].tau1=0.24
+			syn[i].tau2=1.75 
+			syn[i].tau3=3.50  
+			syn[i].tau4=40.0  
+                }
+                if(spine_necks.object(i).sec.diam == 0.1) {
+			syn[i].tau1=0.23
+			syn[i].tau2=1.75
+			syn[i].tau3=3.50  
+			syn[i].tau4=40.0  
+                }
+        }
+
+
+//================================================================================
+// Return the total area of the currently accessed section
+func area_section() { local a
+  for (x) { a += area(x) }  
+  return a
+}
+
+//================================================================================
+proc Spine_Comp_RmCm() { local comp_Fac
+
+     ave_sp_area 	= 1.0
+     area_tot 	= 0
+     TSarea	= 0
+     TSnum 	= 0
+     sp_adj 	= 0.7
+     dfactor	= 1
+     distance( 0, 0.5 )
+
+     forsec "seg" {
+        dist = distance( 1 )
+        adj_diam = diam / dfactor
+        spf=0
+
+        ifsec "dend_basal" {
+           if (adj_diam < 0.5) { spf=3.08*sp_adj }  			//SO-thin
+           if (adj_diam >=0.5) { spf=0.64*sp_adj }  			//SO-thick
+        }
+ 
+        ifsec "dend_apical" {
+           if (adj_diam > 0.99 && dist < 100) {       		//RTP
+              spf	= 0.03*sp_adj
+           }
+           if (adj_diam < 0.6 && dist < 850) {        		//R-thin
+              spf	= 3.52*sp_adj
+           }
+           if (dist >= 850)  { 
+              spf = 0.37*sp_adj                            		// LM-thin
+              if (adj_diam > 0.4) { spf =  0.6*sp_adj }  		// LM-med
+              if (adj_diam > 0.6) { spf =  1.72*sp_adj } 		// LM-think
+           }
+           if (dist >= 100 && dist < 500 && adj_diam > 0.6) {
+              spf = 2.37*sp_adj                                     	// RTM
+           }
+           if( dist >= 500 && dist < 850) {
+              if( adj_diam > 0.7 ) { spf = 4.0*sp_adj }          	//RTD
+              if( adj_diam > 1 )  { spf = 6.98*sp_adj }           	//RTD-fatter
+           }
+        }
+
+        comp_Fac	= ( PI*L*diam + spf*L*ave_sp_area )/(PI*L*diam)
+        cm 		= comp_Fac * cm
+        g_pas 	= comp_Fac * g_pas
+        area_tot 	= area_tot + (PI*L*diam)
+        TSnum 	= TSnum + spf*L
+        TSarea	+= spf*L*ave_sp_area + (PI*L*diam)
+        ifsec "y477_L923_T4_d4_R361_B362" {
+           print "AAL, diam, cm, g_pas, area(.5), comp_Fac, spf , dist ",  L, diam, cm, g_pas, area(.5), comp_Fac, spf, dist
+        }
+        ifsec "ym82_L319_T3_d4_R2445_B2446" {
+           print "AAL, diam, cm, g_pas, area(.5), comp_Fac, spf, dist ",  L, diam, cm, g_pas, area(.5), comp_Fac, spf, dist
+        }
+     }
+     forall { nseg = int((L/(0.1*lambda_f(100))+.9)/2)*2 + 1 }
+
+     print "area_tot= ", area_tot, "TSarea= ", TSarea, "TSnum= ", TSnum
+}
+
+//================================================================================
+// Rm decreases and h increases Linearly with distance from soma
+// 
+//
+proc set_Lin_h() {   	       	    //- setPas_Lin_h()
+    distance( 0, 0.5 )
+    forall {
+         e_pas	= G_e_pas
+         g_pas	= 1 / ( G_Rm * 1000 )
+         Ra		= G_Ra
+         cm		= G_cm
+     }
+  
+     soma {
+          insert ca1AH
+          ek = -90
+          el_ca1AH = -90
+          eh_ca1AH = -20
+//        gkAbarp_ca1AH = 8.29e-3*h_factor
+          gkAbarp_ca1AH = 0
+          gkAbard_ca1AH = 0
+          ghbarf_ca1AH = .165e-3*h_factor
+          ghbars_ca1AH = .055e-3*h_factor
+
+
+          qfinc_ca1AH = 1
+     }
+
+     forsec "seg" {
+          ek = -90
+          el_ca1AH = -90
+          eh_ca1AH = -20
+          qfinc_ca1AH = 1
+          if(distance(0) <= 100) {
+             ghbarf_ca1AH = .165e-3*h_factor + .035e-3*h_factor*distance(0)/100
+             ghbars_ca1AH = .055e-3*h_factor + .014e-3*h_factor*distance(0)/100
+          }
+          if(distance(0) > 100 && distance(0) <=500) {
+             ghbarf_ca1AH = .200e-3*h_factor + .200e-3*h_factor*(distance(0)-100)/100
+             ghbars_ca1AH = .069e-3*h_factor + .065e-3*h_factor*(distance(0)-100)/100
+          }
+          if(distance(0) > 500) {
+             ghbarf_ca1AH = 1e-3*h_factor
+             ghbars_ca1AH = .329e-3*h_factor
+          }
+     }
+
+     forsec "seg" {
+          if (distance(0) > 0 && distance(0) <= 100) {
+//           gkAbarp_ca1AH = 8.29e-3*h_factor + 1.85e-3*h_factor*distance(0)/100
+             gkAbarp_ca1AH = 0
+             gkAbard_ca1AH = 0
+          }
+          if (distance(0) > 100 && distance(0) <= 500) {
+             gkAbarp_ca1AH = 0
+//           gkAbard_ca1AH = 16.58e-3*h_factor + 16.33e-3*h_factor*(distance(0)-100)/100
+             gkAbard_ca1AH = 0
+          }
+          if (distance(0) >  500) {
+//           gkAbard_ca1AH = 81.9e-3*h_factor
+             gkAbard_ca1AH = 0
+             gkAbarp_ca1AH = 0
+          }
+     }
+
+
+    Spine_Comp_RmCm()		// We perform Spine compensation after all else is set.
+}
+
+//===============================================================================
+proc create_syn() {
+
+        print " nsyn= ", nsyn
+        for i=0,nsyn-1 {
+		syn[i].gmax=0
+		syn[i].gmax2=0
+                syn[i].delay=delay
+	}
+        
+        for i = 1,TSyn {
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.2) {
+			syn[nstr+i*invl].gmax=.000496*g_factor
+  			syn[nstr+i*invl].gmax2=.000099*g_factor
+                        print " gmax, tau1, tau2, delay ", i, syn[nstr+i*invl].gmax, syn[nstr+i*invl].tau1, syn[nstr+i*invl].tau2, syn[nstr+i*invl].delay
+                }
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.32) {
+			syn[nstr+i*invl].gmax=.000243*g_factor
+  			syn[nstr+i*invl].gmax2=.0000765*g_factor
+                }
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.1) {
+			syn[nstr+i*invl].gmax=.000187*g_factor
+  			syn[nstr+i*invl].gmax2=.000060*g_factor
+                }
+
+        }
+}
+
+
+//================================================================================
+// Initialize to condition based on h_flag ( 1=acsf -1=zd7288) 
+// Then initialize to steady state by iterating in negative time (see NEURON Book).
+//
+proc init() { local dtsav, was_active
+    print " in init "
+    set_Lin_h()			// uses h_flag to set condition
+    create_syn()
+
+    finitialize( v_init )
+
+    soma {
+      gl_ca1AH=(ghbars_ca1AH*qsinf_ca1AH*qsinf_ca1AH + \
+             ghbarf_ca1AH*qfinf_ca1AH*qfinf_ca1AH)*(v_init-eh_ca1AH)/(el_ca1AH-v_init)
+          print "gl= ",gl_ca1AH , "vinit= ",v_init, "qs= ", qsinf_ca1AH, "qf= ", qfinf_ca1AH
+	  print "gh= ", gh_ca1AH," itot= ",itot_ca1AH, "ih= ",ih_ca1AH, "il= ",il_ca1AH
+          print "e_pas= ",e_pas
+     }
+    forsec "seg" {
+          gl_ca1AH=(ghbars_ca1AH*qsinf_ca1AH*qsinf_ca1AH + \
+             ghbarf_ca1AH*qfinf_ca1AH*qfinf_ca1AH)*(v_init-eh_ca1AH)/(el_ca1AH-v_init)
+//          if (v_init > -69.3) { print "v_init", v_init }
+//          if (v_init < -69.3) { print "v_init", v_init }
+    }
+
+    print " v_init= ",v_init
+    print " TSyn, nstr, invl= ", TSyn, nstr, invl
+    t       = -9e10
+    dtsav	  = dt
+    dt	  = 1e9
+    was_active  = cvode.active()
+    cvode.active( 0 )
+    while( t < -1e9 ) { 
+       fadvance()
+    }
+    dt  = 0.1
+    cvode.active( 1 )
+    while( t < (-1e9 + 1000)  ) { 
+       fadvance() 
+    }
+
+    if( was_active == 0 ) { cvode.active( 0 ) }
+    dt  = dtsav
+    t   = 0
+    if( cvode.active() ) {
+       cvode.re_init()
+    } else {
+       fcurrent()
+    }
+    frecord_init()
+}
+//================================================================================
+cvode.active(1)
+cvode.atol(1.e-3)
+celsius = 33
+
+//v_init = -65.7
+
+G_Ra	= 30
+G_cm	= 0.18
+G_Rm	= 150
+delay	= 52
+
+//G_e_pas	= v_init
+
+print "vinit ", v_init
+
+forall { 
+  insert pas
+}
+soma { insert ca1AH }
+forsec "seg" { insert ca1AH}
+
+objref stim
+soma {
+  stim 		= new IClamp(0.5)
+  stim.del 	= 20	// 22.5 
+  stim.dur 	= 150	// 310
+  stim.amp 	= -0.05
+}
+
+tstop 	= 300
+
+//G_gbar_fast_h  = 1e-4			// Magee 1998 reports 1 to 2 pS/um2 (1pS/um2=1e-4 mho/cm2)
+//G_gbar_slow_h  = G_gbar_fast_h / 4	// From Vasilyev 2002
+
+h_factor  	 = 0.34
+g_factor	= 1.0
+
+print "load ses "
+load_file( "data.ses" )
+print "post load ses"
+//load_file( "/Volumes/d2/cNeuro/lib/nrn/Edata-template.hoc" )    // To plot data to add to MulRunFitter
+//print "post load eD"
+//objref eD
+//eD = new Edata_plot()
+//eD.plot( "/Volumes/d2/cNeuro/Data/Grover-LTP/062204b", "ic_40-44min.txt", -65 )
+

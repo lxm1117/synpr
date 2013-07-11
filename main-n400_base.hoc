@@ -1,0 +1,356 @@
+// main.hoc
+
+load_file("stdlib.hoc") 
+load_file("/axon/d2/cNeuro/MCells/hoc_CA1/n400td-pc2-sp.hoc")
+access soma
+dfactor=1.0
+distance(0,.5)
+ay=area(.5)
+
+// biophysics
+
+strdef filein, thinfile, mushfile, stubfile
+
+thinfile="/axon/d1/Users/holmes/sims/synsims/A4files/A4NhV2D1d10st.dout"
+mushfile="/axon/d1/Users/holmes/sims/synsims/A4files/A4NhV2D1d10sm.dout"
+stubfile="/axon/d1/Users/holmes/sims/synsims/A4files/A4NhV2D1d10ss.dout"
+filein = "n400-celldate"
+TSyn=14
+nstr=105
+invl=6
+v_init=-70
+G_Ra=64
+G_cm=.38
+G_Rm=225000
+factor=.35
+delay=50
+scca=8e-6
+
+tstop=80
+dt=.01
+
+forall {
+        Ra = G_Ra
+        cm = G_cm
+	insert pas 
+	g_pas = 1/G_Rm
+	e_pas = v_init
+ }
+
+proc Spine_Comp_RmCm() { local comp_Fac
+
+     ave_sp_area 	= 1.0
+     area_tot 	= 0
+     TSarea	= 0
+     TSnum 	= 0
+     sp_adj 	= 0.7
+     dfactor	= 1
+     distance( 0, 0.5 )
+
+     forsec "seg" {
+        dist = distance( 1 )
+        adj_diam = diam / dfactor
+        spf=0
+
+        ifsec "dend_basal" {
+           if (adj_diam < 0.5) { spf=3.08*sp_adj }  			//SO-thin
+           if (adj_diam >=0.5) { spf=0.64*sp_adj }  			//SO-thick
+        }
+ 
+        ifsec "dend_apical" {
+           if (adj_diam > 0.99 && dist < 100) {       		//RTP
+              spf	= 0.03*sp_adj
+           }
+           if (adj_diam < 0.6 && dist < 850) {        		//R-thin
+              spf	= 3.52*sp_adj
+           }
+           if (dist >= 850)  { 
+              spf = 0.37*sp_adj                            		// LM-thin
+              if (adj_diam > 0.4) { spf =  0.6*sp_adj }  		// LM-med
+              if (adj_diam > 0.6) { spf =  1.72*sp_adj } 		// LM-think
+           }
+           if (dist >= 100 && dist < 500 && adj_diam > 0.6) {
+              spf = 2.37*sp_adj                                     	// RTM
+           }
+           if( dist >= 500 && dist < 850) {
+              if( adj_diam > 0.7 ) { spf = 4.0*sp_adj }          	//RTD
+              if( adj_diam > 1 )  { spf = 6.98*sp_adj }           	//RTD-fatter
+           }
+        }
+
+        comp_Fac	= ( area(.5) + spf*L*ave_sp_area )/(area(.5))
+        cm 		= comp_Fac * cm
+        g_pas 	= comp_Fac * g_pas
+        area_tot 	= area_tot + (area(.5))
+        TSnum 	= TSnum + spf*L
+        TSarea	+= spf*L*ave_sp_area + (area(.5))
+
+        ifsec "y477_L923_T4_d4_R361_B362" {
+           print "AAL, diam, cm, g_pas, area(.5), comp_Fac, spf , dist ",  L, diam, cm, g_pas, area(.5), comp_Fac, spf, dist
+        }
+        ifsec "ym82_L319_T3_d4_R2445_B2446" {
+           print "AAL, diam, cm, g_pas, area(.5), comp_Fac, spf, dist ",  L, diam, cm, g_pas, area(.5), comp_Fac, spf, dist
+        }
+
+
+     }
+     forall { nseg = int((L/(0.1*lambda_f(100))+.9)/2)*2 + 1 }
+
+     print "area_tot= ", area_tot, "TSarea= ", TSarea, "TSnum= ", TSnum
+}
+
+
+soma { 
+	insert ca1AH
+	ek = -90
+	eh_ca1AH = -20
+	el_ca1AH = -90
+//	gkAbarp_ca1AH = 8.29e-3*factor
+	gkAbarp_ca1AH = 0
+	gkAbard_ca1AH = 0
+	ghbarf_ca1AH = .165e-3*factor
+	ghbars_ca1AH = .055e-3*factor
+	qfinc_ca1AH = 0
+}
+
+forsec "seg" {
+	insert ca1AH
+	ek = -90
+	eh_ca1AH = -20
+	el_ca1AH = -90
+	qfinc_ca1AH = 0
+	if(distance(0) <= 100) {
+	ghbarf_ca1AH = .165e-3*factor + .035e-3*factor*distance(0)/100
+	ghbars_ca1AH = .055e-3*factor + .014e-3*factor*distance(0)/100
+	}
+	if(distance(0) > 100 && distance(0) <=500) {
+	ghbarf_ca1AH = .200e-3*factor + .200e-3*factor*(distance(0)-100)/100
+	ghbars_ca1AH = .069e-3*factor + .065e-3*factor*(distance(0)-100)/100
+	}
+	if(distance(0) > 500) {
+	ghbarf_ca1AH = 1e-3*factor  
+	ghbars_ca1AH = .329e-3*factor 
+	}
+
+}
+
+forsec "seg" {
+   if (distance(0) > 0 && distance(0) <= 100) {
+//	gkAbarp_ca1AH = 8.29e-3*factor + 1.85e-3*factor*distance(0)/100
+	gkAbarp_ca1AH = 0
+	gkAbard_ca1AH = 0
+   }
+   if (distance(0) > 100 && distance(0) <= 500) {
+	gkAbarp_ca1AH = 0
+//	gkAbard_ca1AH = 16.58e-3*factor + 16.33e-3*factor*(distance(0)-100)/100
+	gkAbard_ca1AH = 0
+   }
+   if (distance(0) >  500) {
+//	gkAbard_ca1AH = 81.9e-3*factor
+	gkAbard_ca1AH = 0
+	gkAbarp_ca1AH = 0
+   }
+} 
+
+Spine_Comp_RmCm()		// We perform Spine compensation after all else is set.
+
+
+//synapses
+
+objref spine_heads, sh, spine_necks, sn
+nsyn=0
+spine_heads = new List()
+spine_necks = new List()
+forsec "sph" {
+	sh = new SectionRef() 
+	nsyn=nsyn+1
+	spine_heads.append(sh)
+ }
+forsec "spn" {
+        sn = new SectionRef()
+        spine_necks.append(sn)
+ }
+
+
+objref syn[nsyn]
+objref timet, timem, times, ft, fm, fs
+objref ampat, ampam, ampas, ampat_copy, ampam_copy, ampas_copy
+objref nmdat, nmdam, nmdas, nmdat_copy, nmdam_copy, nmdas_copy
+
+objref ampao[nsyn], nmdao[nsyn]
+
+
+proc create_syn() {
+
+	delay=$1
+	for i = 0,nsyn-1 {
+		spine_heads.object(i).sec { syn[i] = new gsyn(1.0) }
+		syn[i].delay=delay
+		syn[i].scca=scca
+		ampao[i] = new Vector()
+		nmdao[i] = new Vector()
+	}
+        ft = new File()
+        fm = new File()
+        fs = new File()
+        timet = new Vector()
+        timem = new Vector()
+        times = new Vector()
+        ampat = new Vector()
+        ampam = new Vector()
+        ampas = new Vector()
+        nmdat = new Vector()
+        nmdam = new Vector()
+        nmdas = new Vector()
+        ampat_copy = new Vector()
+        ampam_copy = new Vector()
+        ampas_copy = new Vector()
+        nmdat_copy = new Vector()
+        nmdam_copy = new Vector()
+        nmdas_copy = new Vector()
+
+//        ft.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10st.dout")
+        ft.ropen(thinfile)
+        timet.scanf(ft,1,18)
+        timet.scanf(ft,1,3)
+        ft.close()
+//        ft.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10st.dout")
+        ft.ropen(thinfile)
+        ampat.scanf(ft,11,18)
+        ampat.scanf(ft,2,3)
+        ft.close()
+//        ft.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10st.dout")
+        ft.ropen(thinfile)
+        nmdat.scanf(ft,18,18)
+        nmdat.scanf(ft,3,3)
+        ft.close()
+
+        timet.add(delay)
+        timet.insrt(0, 0)
+        ampat.insrt(0, 0)
+        nmdat.insrt(0, 0)
+
+        ampat_copy.copy(ampat)
+        nmdat_copy.copy(nmdat)
+
+//        fm.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10sm.dout")
+        fm.ropen(mushfile)
+        timem.scanf(fm,1,18)
+        timem.scanf(fm,1,3)
+        fm.close()
+//        fm.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10sm.dout")
+        fm.ropen(mushfile)
+        ampam.scanf(fm,11,18)
+        ampam.scanf(fm,2,3)
+        fm.close()
+//        fm.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10sm.dout")
+        fm.ropen(mushfile)
+        nmdam.scanf(fm,18,18)
+        nmdam.scanf(fm,3,3)
+        fm.close()
+
+        timem.add(delay)
+        timem.insrt(0, 0)
+        ampam.insrt(0, 0)
+        nmdam.insrt(0, 0)
+
+        ampam_copy.copy(ampam)
+        nmdam_copy.copy(nmdam)
+
+//        fs.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10ss.dout")        
+	  fs.ropen(stubfile)
+        times.scanf(fs,1,18)
+        times.scanf(fs,1,3)
+        fs.close()
+//        fs.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10ss.dout")
+	  fs.ropen(stubfile)
+        ampas.scanf(fs,11,18)
+        ampas.scanf(fs,2,3)
+        fs.close()
+//        fs.ropen("/maxb/holmes/synsims/compares/A4NhV2D1d10ss.dout")
+	  fs.ropen(stubfile)
+        nmdas.scanf(fs,18,18)
+        nmdas.scanf(fs,3,3)
+        fs.close()
+
+        times.add(delay)
+        times.insrt(0, 0)
+	  ampas.insrt(0, 0)
+        nmdas.insrt(0, 0)
+
+        ampas_copy.copy(ampas)
+        nmdas_copy.copy(nmdas)
+
+//	for i = 0,nsyn-1 {
+  	for i = 1,TSyn {
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.2) {
+                        ampao[nstr+i*invl].copy(ampam_copy)
+                	nmdao[nstr+i*invl].copy(nmdam_copy)
+  			ampao[nstr+i*invl].play(&syn[nstr+i*invl].oampa,timem)
+   			nmdao[nstr+i*invl].play(&syn[nstr+i*invl].onmda,timem)
+                }
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.32) {
+                        ampao[nstr+i*invl].copy(ampas_copy)
+                	nmdao[nstr+i*invl].copy(nmdas_copy)
+  			ampao[nstr+i*invl].play(&syn[nstr+i*invl].oampa,times)
+   			nmdao[nstr+i*invl].play(&syn[nstr+i*invl].onmda,times)
+                }
+                if(spine_necks.object(nstr+i*invl).sec.diam == 0.1) {
+                        ampao[nstr+i*invl].copy(ampat_copy)
+                	nmdao[nstr+i*invl].copy(nmdat_copy)
+  			ampao[nstr+i*invl].play(&syn[nstr+i*invl].oampa,timet)
+   			nmdao[nstr+i*invl].play(&syn[nstr+i*invl].onmda,timet)
+                }
+ 
+	}
+}
+
+
+forall {v = v_init}
+finitialize(v_init)
+objref f2
+f2 = new File()
+objref stim
+soma {
+	stim = new IClamp(0.5)
+	stim.del = 50  
+	stim.dur = 200 
+	stim.amp = 0.00
+}
+	
+proc runsyns() {
+	
+	create_syn($1)
+	forall {
+		v = v_init
+		finitialize(v_init)
+	}
+    soma {
+      gl_ca1AH=(ghbars_ca1AH*qsinf_ca1AH*qsinf_ca1AH + \
+             ghbarf_ca1AH*qfinf_ca1AH*qfinf_ca1AH)*(v-eh_ca1AH)/(el_ca1AH-v)
+
+ //         print "gl= ",gl_ca1AH , "vinit= ",v, "qs= ", qsinf_ca1AH, "qf= ", qfinf_ca1AH
+ //         print "gh= ", gh_ca1AH," itot= ",itot_ca1AH, "ih= ",ih_ca1AH, "il= ",il_ca1AH
+ //         print "e_pas= ",e_pas
+     }
+    forsec "seg" {
+          gl_ca1AH=(ghbars_ca1AH*qsinf_ca1AH*qsinf_ca1AH + \
+             ghbarf_ca1AH*qfinf_ca1AH*qfinf_ca1AH)*(v-eh_ca1AH)/(el_ca1AH-v)
+    }
+ 
+	f2.wopen(filein)
+	while (t < tstop) {
+	       fadvance()
+             if (t < 0.1) {
+               print soma.gkA_ca1AH(.5), soma.gh_ca1AH(.5),soma.gtot_ca1AH(.5), soma.g_pas(.5)
+		 }
+		 f2.printf("%g %g \n", \
+			t, soma.v(.5))
+//			soma.gkA_ca1AH(.5),soma.gh_ca1AH(.5), \
+//			soma.ikA_ca1AH(.5), soma.ih_ca1AH(.5), \
+//		  	soma.gtot_ca1AH(.5), soma.g_pas(.5), \
+	}
+	f2.close()
+}
+
+runsyns(delay,filein)
